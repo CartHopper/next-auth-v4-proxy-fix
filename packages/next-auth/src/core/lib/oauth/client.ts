@@ -2,6 +2,8 @@ import { Issuer, custom } from "openid-client"
 import type { Client } from "openid-client"
 import type { InternalOptions } from "../../types"
 
+import HttpsProxyAgent from "https-proxy-agent";
+
 /**
  * NOTE: We can add auto discovery of the provider's endpoint
  * that requires only one endpoint to be specified by the user.
@@ -13,8 +15,13 @@ export async function openidClient(
   options: InternalOptions<"oauth">
 ): Promise<Client> {
   const provider = options.provider
-
-  if (provider.httpOptions) custom.setHttpOptionsDefaults(provider.httpOptions)
+  let httpOptions: { agent?: typeof HttpsProxyAgent } = {};
+  if (provider.httpOptions) httpOptions = { ...provider.httpOptions };
+  if (process.env.http_proxy) {
+      let agent = new HttpsProxyAgent(process.env.http_proxy);
+      httpOptions.agent = agent;
+  }
+  custom.setHttpOptionsDefaults(httpOptions);
 
   let issuer: Issuer
   if (provider.wellKnown) {
